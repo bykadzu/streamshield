@@ -1,0 +1,76 @@
+{
+  "version": "1.0.0",
+  "description": "Built-in detection patterns for PII, secrets, and sensitive content",
+  "categories": {
+    "api_keys": {
+      "label": "API Keys & Tokens",
+      "severity": 3,
+      "enabled": true,
+      "patterns": [
+        { "name": "OpenAI API Key", "regex": "sk-[a-zA-Z0-9]{20,}" },
+        { "name": "Anthropic API Key", "regex": "sk-ant-[a-zA-Z0-9-]{20,}" },
+        { "name": "AWS Access Key", "regex": "AKIA[0-9A-Z]{16}" },
+        { "name": "AWS Secret Key", "regex": "aws.{0,20}['\"][0-9a-zA-Z/+]{40}['\"]" },
+        { "name": "GitHub Token", "regex": "ghp_[a-zA-Z0-9]{36}" },
+        { "name": "GitHub OAuth", "regex": "gho_[a-zA-Z0-9]{36}" },
+        { "name": "GitHub PAT (fine)", "regex": "github_pat_[a-zA-Z0-9_]{82}" },
+        { "name": "Slack Token", "regex": "xox[bpsa]-[a-zA-Z0-9-]+" },
+        { "name": "Slack Webhook", "regex": "https://hooks\\.slack\\.com/services/T[a-zA-Z0-9_]+/B[a-zA-Z0-9_]+/[a-zA-Z0-9_]+" },
+        { "name": "Stripe Secret Key", "regex": "sk_live_[a-zA-Z0-9]{24,}" },
+        { "name": "Stripe Publishable", "regex": "pk_live_[a-zA-Z0-9]{24,}" },
+        { "name": "Google API Key", "regex": "AIza[0-9A-Za-z_-]{35}" },
+        { "name": "Twitch Client Secret", "regex": "twitch.{0,20}['\"][a-z0-9]{30}['\"]" },
+        { "name": "Discord Bot Token", "regex": "[MN][A-Za-z\\d]{23,}\\.[\\w-]{6}\\.[\\w-]{27}" },
+        { "name": "Telegram Bot Token", "regex": "\\d{8,10}:[A-Za-z0-9_-]{35}" },
+        { "name": "Supabase Key", "regex": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\\.[a-zA-Z0-9_-]+" },
+        { "name": "Firebase Key", "regex": "AAAA[A-Za-z0-9_-]{7}:[A-Za-z0-9_-]{140}" },
+        { "name": "Vercel Token", "regex": "vercel_[a-zA-Z0-9]{24}" },
+        { "name": "NPM Token", "regex": "npm_[a-zA-Z0-9]{36}" },
+        { "name": "Private Key Header", "regex": "-----BEGIN (RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----" },
+        { "name": "Generic Secret Assignment", "regex": "(secret|token|password|apikey|api_key)\\s*[:=]\\s*['\"][^'\"]{8,}['\"]" }
+      ]
+    },
+    "financial": {
+      "label": "Financial Information",
+      "severity": 3,
+      "enabled": true,
+      "patterns": [
+        { "name": "Credit Card (spaced)", "regex": "\\b\\d{4}[\\s-]\\d{4}[\\s-]\\d{4}[\\s-]\\d{4}\\b" },
+        { "name": "Credit Card (continuous)", "regex": "\\b(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13}|6(?:011|5[0-9]{2})[0-9]{12})\\b" },
+        { "name": "CVV near card", "regex": "(?:cvv|cvc|cv2)\\s*[:=]?\\s*\\d{3,4}" },
+        { "name": "IBAN", "regex": "\\b[A-Z]{2}\\d{2}[\\s]?[A-Z0-9]{4}[\\s]?(?:[A-Z0-9]{4}[\\s]?){2,7}[A-Z0-9]{1,4}\\b" },
+        { "name": "Bitcoin Address", "regex": "\\b(?:bc1|[13])[a-zA-HJ-NP-Z0-9]{25,39}\\b" },
+        { "name": "PayPal Link with Email", "regex": "paypal\\.com.{0,50}[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}" }
+      ]
+    },
+    "personal_info": {
+      "label": "Personal Information",
+      "severity": 2,
+      "enabled": true,
+      "patterns": [
+        { "name": "Email Address", "regex": "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b" },
+        { "name": "Phone Number (US)", "regex": "\\b(?:\\+?1[\\s.-]?)?\\(?\\d{3}\\)?[\\s.-]?\\d{3}[\\s.-]?\\d{4}\\b" },
+        { "name": "Phone Number (EU)", "regex": "\\b\\+?(?:31|32|33|34|39|41|43|44|49)\\s?\\d[\\s.-]?(?:\\d[\\s.-]?){6,12}\\b" },
+        { "name": "SSN (US)", "regex": "\\b\\d{3}-\\d{2}-\\d{4}\\b" },
+        { "name": "IP Address (v4)", "regex": "\\b(?:(?:25[0-5]|2[0-4]\\d|[01]?\\d\\d?)\\.){3}(?:25[0-5]|2[0-4]\\d|[01]?\\d\\d?)\\b" },
+        { "name": "Street Address (US-style)", "regex": "\\b\\d{1,5}\\s[A-Z][a-zA-Z\\s]{2,30}(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Drive|Dr|Lane|Ln|Way|Court|Ct)\\b" }
+      ]
+    },
+    "urls_and_endpoints": {
+      "label": "Sensitive URLs",
+      "severity": 1,
+      "enabled": false,
+      "patterns": [
+        { "name": "Localhost with port", "regex": "(?:localhost|127\\.0\\.0\\.1):\\d{2,5}" },
+        { "name": "Internal URL", "regex": "https?://(?:internal|staging|dev|admin)\\.[a-zA-Z0-9.-]+" },
+        { "name": "Database Connection String", "regex": "(?:postgres|mysql|mongodb)://[^\\s]+" }
+      ]
+    }
+  },
+  "custom": {
+    "label": "Custom Patterns (User-Defined)",
+    "severity": 3,
+    "enabled": true,
+    "patterns": []
+  }
+}
