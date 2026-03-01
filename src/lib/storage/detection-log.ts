@@ -265,3 +265,20 @@ export class DetectionLog {
 
 // Export default instance
 export const detectionLog = new DetectionLog();
+
+// Helper for review page
+export interface ReviewSession {
+  id: string;
+  startTime: string;
+  endTime: string | null;
+  detectionCount: number;
+}
+
+export function sessionRecordToReviewSession(record: SessionRecord): ReviewSession {
+  return {
+    id: record.id,
+    startTime: new Date(record.startedAt).toISOString(),
+    endTime: record.endedAt ? new Date(record.endedAt).toISOString() : null,
+    detectionCount: record.totalDetections,
+  };
+}

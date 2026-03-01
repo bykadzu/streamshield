@@ -10,6 +10,8 @@ import { OCRPipeline } from "./lib/detection/ocr";
 import { PatternEngine } from "./lib/detection/patterns";
 import { DetectionLog, type DetectionEvent } from "./lib/storage/detection-log";
 import { DetectionPipeline } from "./lib/detection/pipeline";
+import SettingsPage from "./components/SettingsPage";
+import ReviewPage from "./components/ReviewPage";
 
 type Page = "dashboard" | "settings" | "review";
 
@@ -370,32 +372,3 @@ function StatusCard({
   );
 }
 
-function SettingsPage() {
-  return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Settings</h1>
-      <div className="rounded-lg border border-gray-800 bg-gray-900 p-6">
-        <p className="text-gray-400">Settings UI — Phase 1 TODO</p>
-        <p className="text-sm text-gray-500 mt-2">
-          OBS connection, detection sensitivity, custom patterns, kill-phrase
-          config.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function ReviewPage() {
-  return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Post-Stream Review</h1>
-      <div className="rounded-lg border border-gray-800 bg-gray-900 p-6">
-        <p className="text-gray-400">Review Queue — Phase 1 TODO</p>
-        <p className="text-sm text-gray-500 mt-2">
-          After each stream, review what StreamShield detected and adjust
-          sensitivity.
-        </p>
-      </div>
-    </div>
-  );
-}
