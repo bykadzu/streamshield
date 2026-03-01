@@ -46,7 +46,7 @@ export class OBSClient {
     };
 
     // Set up event listeners
-    this.obs.on("ConnectionClosed", (event: { code: number; reason: string }) => {
+    this.obs.on("ConnectionClosed", (event: unknown) => {
       console.log("[OBS] Connection closed:", event);
       this.updateState({ connected: false });
       
@@ -66,7 +66,7 @@ export class OBSClient {
     this.isIntentionallyDisconnected = false;
 
     try {
-      await this.obs.connect(this.config);
+      await this.obs.connect(this.config.url, this.config.password);
       
       // Get version info
       const version = await this.obs.call("GetVersion");
@@ -186,7 +186,8 @@ export class OBSClient {
 
     // Try to create the filter - if it exists, this may error but that's OK
     try {
-      await this.obs.call("CreateOrGetSourceFilter", {
+      // Type assertion - obs-websocket-js types may be incomplete
+      await (this.obs.call as (type: string, data?: Record<string, unknown>) => Promise<unknown>)("CreateOrGetSourceFilter", {
         sourceName,
         filterName,
         filterType: "blur_filter",

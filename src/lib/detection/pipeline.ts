@@ -12,7 +12,7 @@
 
 import { OBSClient } from "../obs/client";
 import { OCRPipeline } from "./ocr";
-import { PatternEngine, PatternMatch } from "./patterns";
+import { PatternEngine } from "./patterns";
 import { DetectionLog, DetectionEvent, ActionType } from "../storage/detection-log";
 
 export interface PipelineConfig {

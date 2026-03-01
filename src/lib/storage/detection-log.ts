@@ -32,6 +32,8 @@ export interface PatternMatch {
 
 export type ActionType = "none" | "log" | "mute" | "blur" | "block" | "kill";
 
+export type DetectionListener = (event: DetectionEvent) => void;
+
 export interface DetectionRecord {
   id: string;
   sessionId: string;

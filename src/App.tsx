@@ -1,9 +1,12 @@
 import { useState } from "react";
+import { useOBSConnection } from "./hooks/useOBSConnection";
+import type { OBSConnectionState } from "./hooks/useOBSConnection";
 
 type Page = "dashboard" | "settings" | "review";
 
 export default function App() {
   const [page, setPage] = useState<Page>("dashboard");
+  const obs = useOBSConnection();
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100">
@@ -36,7 +39,7 @@ export default function App() {
 
       {/* Content */}
       <main className="p-6">
-        {page === "dashboard" && <DashboardPage />}
+        {page === "dashboard" && <DashboardPage obs={obs} />}
         {page === "settings" && <SettingsPage />}
         {page === "review" && <ReviewPage />}
       </main>
@@ -44,7 +47,12 @@ export default function App() {
   );
 }
 
-function DashboardPage() {
+function DashboardPage({ obs }: { obs: OBSConnectionState & { connect: () => Promise<void>; disconnect: () => Promise<void> } }) {
+  // TODO: Wire up to DetectionPipeline for real stats
+  // const [framesScanned, setFramesScanned] = useState(0);
+  // const [threatsBlocked, setThreatsBlocked] = useState(0);
+  // const [detections, setDetections] = useState<string[]>([]);
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Dashboard</h1>
@@ -52,15 +60,38 @@ function DashboardPage() {
       {/* Connection Status */}
       <div className="rounded-lg border border-gray-800 bg-gray-900 p-6">
         <div className="flex items-center gap-3">
-          <div className="h-3 w-3 rounded-full bg-red-500" />
-          <span className="text-lg font-medium">OBS: Disconnected</span>
+          <div className={`h-3 w-3 rounded-full ${obs.isConnected ? "bg-emerald-500" : obs.isConnecting ? "bg-yellow-500 animate-pulse" : "bg-red-500"}`} />
+          <span className="text-lg font-medium">
+            OBS: {obs.isConnected ? "Connected" : obs.isConnecting ? "Connecting..." : "Disconnected"}
+          </span>
         </div>
         <p className="mt-2 text-sm text-gray-400">
-          Connect to OBS to start monitoring your stream.
+          {obs.isConnected 
+            ? "Ready to monitor your stream." 
+            : "Connect to OBS to start monitoring your stream."}
         </p>
-        <button className="mt-4 rounded bg-emerald-600 px-4 py-2 text-sm font-medium hover:bg-emerald-500 transition-colors">
-          Connect to OBS
-        </button>
+        
+        {obs.error && (
+          <p className="mt-2 text-sm text-red-400">{obs.error}</p>
+        )}
+        
+        {!obs.isConnected && !obs.isConnecting && (
+          <button 
+            onClick={() => obs.connect()}
+            className="mt-4 rounded bg-emerald-600 px-4 py-2 text-sm font-medium hover:bg-emerald-500 transition-colors"
+          >
+            Connect to OBS
+          </button>
+        )}
+        
+        {obs.isConnected && (
+          <button 
+            onClick={() => obs.disconnect()}
+            className="mt-4 rounded bg-gray-700 px-4 py-2 text-sm font-medium hover:bg-gray-600 transition-colors"
+          >
+            Disconnect
+          </button>
+        )}
       </div>
 
       {/* Shield Status */}
