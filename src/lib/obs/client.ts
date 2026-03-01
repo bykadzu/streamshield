@@ -10,10 +10,10 @@
 import OBSWebSocket from "obs-websocket-js";
 
 export interface OBSConnectionConfig {
-  url: string; // e.g. "ws://localhost:4455"
+  url: string;
   password?: string;
-  reconnectInterval?: number; // ms, default 5000
-  maxReconnectAttempts?: number; // default 10
+  reconnectInterval?: number;
+  maxReconnectAttempts?: number;
 }
 
 export interface OBSConnectionState {
@@ -46,8 +46,8 @@ export class OBSClient {
     };
 
     // Set up event listeners
-    this.obs.on("ConnectionClosed", (event: unknown) => {
-      console.log("[OBS] Connection closed:", event);
+    this.obs.on("ConnectionClosed", () => {
+      console.log("[OBS] Connection closed");
       this.updateState({ connected: false });
       
       if (!this.isIntentionallyDisconnected) {
@@ -76,9 +76,9 @@ export class OBSClient {
 
       this.updateState({
         connected: true,
-        obsVersion: version.obsVersion as string,
-        wsVersion: version.obsWebSocketVersion as string,
-        currentScene: programScene.sceneName as string,
+        obsVersion: String(version.obsVersion),
+        wsVersion: String(version.obsWebSocketVersion),
+        currentScene: String(programScene.sceneName),
       });
 
       this.reconnectAttempts = 0;
@@ -130,7 +130,7 @@ export class OBSClient {
         imageHeight: height,
       });
 
-      return result.imageData as string; // Base64 PNG
+      return String(result.imageData);
     } catch (error) {
       console.error("[OBS] Failed to capture screenshot:", error);
       throw error;
@@ -142,7 +142,6 @@ export class OBSClient {
       throw new Error("OBS not connected");
     }
 
-    // Store original scene if not already stored
     if (!this.originalSceneName && this.state.currentScene) {
       this.originalSceneName = this.state.currentScene;
     }
@@ -184,10 +183,9 @@ export class OBSClient {
       throw new Error("OBS not connected");
     }
 
-    // Try to create the filter - if it exists, this may error but that's OK
     try {
-      // Type assertion - obs-websocket-js types may be incomplete
-      await (this.obs.call as (type: string, data?: Record<string, unknown>) => Promise<unknown>)("CreateOrGetSourceFilter", {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (this.obs as any).call("CreateOrGetSourceFilter", {
         sourceName,
         filterName,
         filterType: "blur_filter",
@@ -214,8 +212,7 @@ export class OBSClient {
         filterName,
       });
       console.log(`[OBS] Removed blur filter from: ${sourceName}`);
-    } catch (error) {
-      // Filter might not exist, that's OK
+    } catch {
       console.log(`[OBS] Filter removal (may not exist): ${filterName}`);
     }
   }
@@ -226,7 +223,6 @@ export class OBSClient {
     }
 
     try {
-      // Stop streaming
       await this.obs.call("StopStream");
       console.log("[OBS] Stream ended");
     } catch (error) {
@@ -241,7 +237,8 @@ export class OBSClient {
     }
 
     const result = await this.obs.call("GetSceneList");
-    return (result.scenes as Array<{ sceneName: string }>).map((s) => s.sceneName);
+    const scenes = result.scenes as Array<{ sceneName: string }>;
+    return scenes.map((s) => s.sceneName);
   }
 
   async getSourceList(): Promise<string[]> {
@@ -250,12 +247,12 @@ export class OBSClient {
     }
 
     const result = await this.obs.call("GetInputList");
-    return (result.inputs as Array<{ inputName: string }>).map((i) => i.inputName);
+    const inputs = result.inputs as Array<{ inputName: string }>;
+    return inputs.map((i) => i.inputName);
   }
 
   onStateChange(listener: ConnectionListener): () => void {
     this.listeners.add(listener);
-    // Immediately call with current state
     listener(this.state);
     return () => this.listeners.delete(listener);
   }
@@ -288,9 +285,7 @@ export class OBSClient {
 
     this.reconnectTimer = setTimeout(() => {
       this.reconnectAttempts++;
-      this.connect().catch(() => {
-        // Connection error will trigger scheduleReconnect again via event handler
-      });
+      this.connect().catch(() => {});
     }, delay);
   }
 
@@ -302,9 +297,8 @@ export class OBSClient {
       
       try {
         await this.obs.call("GetVersion");
-        // Connection is healthy
-      } catch (error) {
-        console.warn("[OBS] Health check failed, connection may be lost");
+      } catch {
+        console.warn("[OBS] Health check failed");
       }
     }, 10000);
   }
