@@ -10,6 +10,8 @@ import { OCRPipeline } from "./lib/detection/ocr";
 import { PatternEngine } from "./lib/detection/patterns";
 import { DetectionLog, type DetectionEvent } from "./lib/storage/detection-log";
 import { DetectionPipeline } from "./lib/detection/pipeline";
+import { AudioDetectionPipeline } from "./lib/audio/detector";
+import { AudioTranscriber } from "./lib/audio/transcriber";
 import SettingsPage from "./components/SettingsPage";
 import ReviewPage from "./components/ReviewPage";
 import MonitorPage from "./components/MonitorPage";
@@ -27,8 +29,12 @@ export default function App() {
   const [obsConnected, setObsConnected] = useState(false);
   const [obsConnecting, setObsConnecting] = useState(false);
   const [obsError, setObsError] = useState<string | null>(null);
+  const [audioEnabled] = useState(true);
+  const [audioTranscribing, setAudioTranscribing] = useState(false);
+  const [audioDetections, setAudioDetections] = useState<DetectionEvent[]>([]);
 
   const pipelineRef = useRef<DetectionPipeline | null>(null);
+  const audioPipelineRef = useRef<AudioDetectionPipeline | null>(null);
 
   // Pattern engine and OCR instances
   const patternEngineRef = useRef<PatternEngine>(new PatternEngine());
@@ -117,18 +123,76 @@ export default function App() {
 
     await p.start();
     pipelineRef.current = p;
+
+    // Start audio detection pipeline if enabled
+    if (audioEnabled) {
+      try {
+        // Create audio transcriber
+        const audioTranscriber = new AudioTranscriber({
+          enabled: true,
+          scanIntervalMs: 1500,
+          minConfidence: 0.7,
+        });
+
+        const audioPipeline = new AudioDetectionPipeline(
+          audioTranscriber,
+          patternEngineRef.current,
+          storageRef.current,
+          {
+            enabled: true,
+            scanIntervalMs: 1500,
+          }
+        );
+
+        audioPipeline.onDetection((event) => {
+          // Add audio detection to display list (simplified for UI)
+          const detectionEvent: DetectionEvent = {
+            id: event.id,
+            timestamp: event.timestamp,
+            frameIndex: 0,
+            ocrResult: { text: event.transcription.text, confidence: event.transcription.confidence, processingTimeMs: 0 },
+            matches: event.matches,
+            highestSeverity: event.highestSeverity,
+            actionTaken: event.actionTaken,
+          };
+          setAudioDetections((prev) => [detectionEvent, ...prev].slice(0, 10));
+          // Also add to main threats count
+          if (event.matches.length > 0) {
+            setThreatsBlocked((t) => t + event.matches.length);
+          }
+        });
+
+        await audioPipeline.start();
+        audioPipelineRef.current = audioPipeline;
+        setAudioTranscribing(true);
+        console.log("[App] Audio detection started");
+      } catch (err) {
+        console.error("[App] Audio detection failed to start:", err);
+      }
+    }
+
     setPipeline(p);
     setIsMonitoring(true);
     console.log("[App] Monitoring started");
-  }, [obsClient]);
+  }, [obsClient, audioEnabled]);
 
   // Stop monitoring
   const stopMonitoring = useCallback(async () => {
-    if (!pipelineRef.current) return;
-
-    pipelineRef.current.stop();
-    pipelineRef.current = null;
+    // Stop visual pipeline
+    if (pipelineRef.current) {
+      pipelineRef.current.stop();
+      pipelineRef.current = null;
+    }
     setPipeline(null);
+
+    // Stop audio pipeline
+    if (audioPipelineRef.current) {
+      audioPipelineRef.current.stop();
+      audioPipelineRef.current = null;
+    }
+    setAudioTranscribing(false);
+    setAudioDetections([]);
+
     setIsMonitoring(false);
     console.log("[App] Monitoring stopped");
   }, []);
@@ -138,6 +202,9 @@ export default function App() {
     return () => {
       if (pipelineRef.current) {
         pipelineRef.current.stop();
+      }
+      if (audioPipelineRef.current) {
+        audioPipelineRef.current.stop();
       }
       ocrPipelineRef.current.shutdown();
     };
@@ -183,6 +250,9 @@ export default function App() {
             framesScanned={framesScanned}
             threatsBlocked={threatsBlocked}
             recentDetections={recentDetections}
+            audioEnabled={audioEnabled}
+            audioTranscribing={audioTranscribing}
+            audioDetections={audioDetections}
             onConnect={connectOBS}
             onDisconnect={disconnectOBS}
             onStartMonitoring={startMonitoring}
@@ -213,6 +283,9 @@ interface DashboardPageProps {
   framesScanned: number;
   threatsBlocked: number;
   recentDetections: DetectionEvent[];
+  audioEnabled: boolean;
+  audioTranscribing: boolean;
+  audioDetections: DetectionEvent[];
   onConnect: () => void;
   onDisconnect: () => void;
   onStartMonitoring: () => void;
@@ -227,6 +300,9 @@ function DashboardPage({
   framesScanned,
   threatsBlocked,
   recentDetections,
+  audioEnabled,
+  audioTranscribing,
+  audioDetections,
   onConnect,
   onDisconnect,
   onStartMonitoring,
@@ -305,16 +381,21 @@ function DashboardPage({
       </div>
 
       {/* Shield Status */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-4 gap-4">
         <StatusCard
           label="Shield"
           value={isMonitoring ? "Active" : "Inactive"}
           color={isMonitoring ? "green" : "gray"}
         />
         <StatusCard
-          label="Frames Scanned"
-          value={framesScanned.toString()}
+          label="Visual FPS"
+          value={framesScanned > 0 ? "2" : "0"}
           color="gray"
+        />
+        <StatusCard
+          label="Audio"
+          value={audioTranscribing ? "Listening" : audioEnabled ? "Ready" : "Off"}
+          color={audioTranscribing ? "green" : audioEnabled ? "gray" : "red"}
         />
         <StatusCard
           label="Threats Blocked"
@@ -326,19 +407,41 @@ function DashboardPage({
       {/* Recent Detections */}
       <div className="rounded-lg border border-gray-800 bg-gray-900 p-6">
         <h2 className="text-lg font-medium mb-4">Recent Detections</h2>
-        {recentDetections.length === 0 ? (
+        {recentDetections.length === 0 && audioDetections.length === 0 ? (
           <p className="text-sm text-gray-500">
             No detections yet. Start a monitoring session to see activity
             here.
           </p>
         ) : (
           <div className="space-y-2">
+            {/* Visual detections */}
             {recentDetections.map((detection, idx) => (
               <div
-                key={`${detection.id}-${idx}`}
-                className="flex items-center justify-between rounded bg-gray-800 p-3"
+                key={`visual-${detection.id}-${idx}`}
+                className="flex items-center justify-between rounded bg-gray-800 p-3 border-l-2 border-emerald-500"
               >
-                <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-emerald-400">VISUAL</span>
+                  <span className="font-medium text-yellow-400">
+                    {detection.matches[0]?.patternName || "Unknown"}
+                  </span>
+                  <span className="ml-2 text-sm text-gray-400">
+                    ({detection.actionTaken})
+                  </span>
+                </div>
+                <span className="text-xs text-gray-500">
+                  {new Date(detection.timestamp).toLocaleTimeString()}
+                </span>
+              </div>
+            ))}
+            {/* Audio detections */}
+            {audioDetections.map((detection, idx) => (
+              <div
+                key={`audio-${detection.id}-${idx}`}
+                className="flex items-center justify-between rounded bg-gray-800 p-3 border-l-2 border-purple-500"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-purple-400">AUDIO</span>
                   <span className="font-medium text-yellow-400">
                     {detection.matches[0]?.patternName || "Unknown"}
                   </span>
