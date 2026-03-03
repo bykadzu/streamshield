@@ -12,8 +12,9 @@ import { DetectionLog, type DetectionEvent } from "./lib/storage/detection-log";
 import { DetectionPipeline } from "./lib/detection/pipeline";
 import SettingsPage from "./components/SettingsPage";
 import ReviewPage from "./components/ReviewPage";
+import MonitorPage from "./components/MonitorPage";
 
-type Page = "dashboard" | "settings" | "review";
+type Page = "dashboard" | "monitor" | "settings" | "review";
 
 export default function App() {
   const [page, setPage] = useState<Page>("dashboard");
@@ -155,7 +156,7 @@ export default function App() {
           </span>
         </div>
         <div className="flex gap-1 ml-8">
-          {(["dashboard", "settings", "review"] as Page[]).map((p) => (
+          {(["dashboard", "monitor", "settings", "review"] as Page[]).map((p) => (
             <button
               key={p}
               onClick={() => setPage(p)}
@@ -185,6 +186,15 @@ export default function App() {
             onConnect={connectOBS}
             onDisconnect={disconnectOBS}
             onStartMonitoring={startMonitoring}
+            onStopMonitoring={stopMonitoring}
+          />
+        )}
+        {page === "monitor" && (
+          <MonitorPage
+            isMonitoring={isMonitoring}
+            framesScanned={framesScanned}
+            threatsBlocked={threatsBlocked}
+            recentDetections={recentDetections}
             onStopMonitoring={stopMonitoring}
           />
         )}
